@@ -1,0 +1,378 @@
+package CE1;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.Scanner;
+/**
+ * 
+ * This class is to manipulate the text in .txt file. 
+ * the main command includes: 
+ * add + "%1$s": 	  add a certain line into the file
+ * display: 	  display the content in the file with line numbers 
+ * clear: 		  clear all the content in the file
+ * delete + "%2$d": delete the certain line 
+ * exit:          terminate 
+ * The file can be saved to the disk after each user operation 
+ *
+
+ * @author Zhao Hang
+ */
+public class TextBuddy {
+	//this is the name of the file
+	private static String m_fileName = null;
+	//this is the flag for exit
+	private static boolean isExitCommand = false;
+	//this is the file for editing
+	private static File f;
+	
+	/**
+	 * Solve the problem at high level
+	 * 
+	 */
+	public static void main(String[] args) throws IOException { 
+		exitWrongInput(args);
+		createFile(args);
+		printWelcomeMessage();
+		RandomAccessFile r = new RandomAccessFile(f, "rw");
+		executeCommandsUntilExitCommand(r);
+		
+	}
+
+	/**
+	 * This method is to deal  with both wrong input and no input
+	 * 
+	 * @param args
+	 */
+	private static void exitWrongInput(String[] args) {
+		exitNoInput(args);
+		exitUnacceptableInput(args);
+		
+	}
+
+	/**
+	 * input arguments not ending with .txt is not acceptable
+	 *
+	 */
+	private static void exitUnacceptableInput(String[] args) {
+		if(args[0].length()<=4){
+			System.out.println("File Name should be end with .txt and file should have a name.");
+			System.exit(0);
+		}else {
+			if(!args[0].substring(args[0].length()-4,args[0].length()).equals(".txt")){
+				System.out.println("File Name should be end with .txt");
+				System.exit(0);
+			}
+		}
+	
+	}
+
+	/**
+	 * input arguments cannot be blank
+	 *
+	 */
+	private static void exitNoInput(String[] args) {
+		if( args.length == 0){
+			System.out.println("No File Name!");
+			System.exit(0);
+		}
+		
+	}
+
+	/**
+	 * create new file
+	 *
+	 */
+	private static void createFile(String[] args) {
+
+		m_fileName = args[0];
+		f = new File(m_fileName);
+		if (!f.exists()) {
+			try{
+				f.createNewFile();
+			}catch ( IOException e){
+				System.out.println("Cannot create new file!");
+				System.exit(0);
+			}
+			
+		}
+	}
+	
+	/**
+	 * print out welcome message
+	 *
+	 */
+	private static void printWelcomeMessage() {
+		System.out.println("Welcome to TextBuddy. "+ m_fileName + " is ready for use");
+		
+	}
+	/**
+	 * This method is to read the command and execute it
+	 * 
+	 * @param randomaccessfile
+	 * 
+	 */
+	@SuppressWarnings("resource")
+	private static void executeCommandsUntilExitCommand(RandomAccessFile r) throws IOException {
+		//this scanner is for user's to input command
+		Scanner scan = new Scanner(System.in);
+		
+		//loop until the user input exit
+		while (!isExitCommand){
+			
+			System.out.print("Command: ");
+			String line = scan.nextLine();
+			// read the command and find the command word
+			String command = getFirstWord(line);
+			// read the command and find the content
+			String contend = removeFirstWord(line);
+			//recognize the command and execute it
+			if( isAddCommand(command) ){
+				excuteAdd(contend, r);
+			}else if( isDisplay(command)){
+				excuteDisplay();
+			}else if( isDelete(command)){
+				excuteDelete(contend,r);
+			}else if( isClear(command)){
+				excuteClear(r);
+			}else if (isExit(command)){
+				excuteExit();
+			}else{
+				excuteWrongCommand();
+			}
+			
+		}
+		
+	}
+
+	/**
+	 * This method is to print the wrong message when wrong command
+	 * 
+	 */
+	private static void excuteWrongCommand() {
+		System.out.println("Invalid Command, please try again!");
+		
+	}
+
+	/**
+	 * This method is to execute exit command
+	 * 
+	 */
+	private static void excuteExit() {
+		isExitCommand = true;
+		System.exit(0);
+
+	}
+
+	/**
+	 * This method is to execute the clear command
+	 * 
+	 * @param file
+	 * 
+	 */
+	private static void excuteClear(RandomAccessFile r) throws IOException {
+		//set the file length to 0
+		r.setLength(0);
+		//move to the beginning of the file
+		r.seek(0);
+		System.out.println("all content deleted from " + m_fileName);
+	}
+
+	/**
+	 * This method is to execute the delete method
+	 * 
+	 * @param which line to delete
+	 * 
+	 * @param  file
+	 * 
+	 */
+	@SuppressWarnings("resource")
+	private static void excuteDelete(String content, RandomAccessFile r) {
+		try {
+			//make the string to Integer, and if not integer, catch a NumberFormatException
+			int numberOfLine = Integer.parseInt(content);
+			BufferedReader br = new BufferedReader (new FileReader(m_fileName));
+			//string buffer to store the lines
+			StringBuffer sb = new StringBuffer(4096);
+			//Temporary string 
+			String temp = null;
+			//string to delete
+			String delete = null;
+			//a counter for line number
+			int line = 0;
+			
+			while((temp=br.readLine())!=null){
+				line++;
+				if(line==numberOfLine){
+					delete = temp;
+					continue;
+				}
+				sb.append(temp).append( "\r\n");
+			}
+			//if the number of deleted line <=0 or >max lineNUmber
+			if(numberOfLine <= 0 || numberOfLine > line){
+				System.out.println("Wrong Number of line!");
+				return;
+			}
+			br.close();
+			BufferedWriter bw=new BufferedWriter(new FileWriter(m_fileName));
+			bw.write(sb.toString());
+			System.out.println("deleted from " + m_fileName + ": \"" + delete + "\"" );
+			bw.close();
+		}
+		catch (FileNotFoundException ex) {
+			ex.printStackTrace();
+		}
+		catch (IOException ex) {
+			ex.printStackTrace();
+		}
+		catch (NumberFormatException ex){
+			System.out.println("Command should be a number!");
+		}
+
+	}
+
+	/**
+	 * This method is to execute the display command
+	 * 
+	 * 
+	 */
+	private static void excuteDisplay() throws IOException {
+		//counter for lines
+		int i = 1;
+		//temporary string
+		String line;
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(f));
+			//file empty
+			if(((line = br.readLine())==null)){
+				System.out.println(m_fileName + " is empty");
+				br.close();
+				return;
+			}else{
+				System.out.println(i+". " + line);
+				i++;
+			}
+			while ((line = br.readLine())!=null){
+					
+				System.out.println(i+". " + line);
+				i++;
+			}
+			
+			br.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("File does not exist.");
+		}
+		
+	}
+
+	/**
+	 * This method is to execute the add command
+	 * 
+	 * @param content to add
+	 * 
+	 * @param file
+	 * 
+	 */
+	private static void excuteAdd(String content, RandomAccessFile r) throws IOException {
+		//line to add to the end of file
+		String Line = content;
+		try {
+			r.write(Line.getBytes());
+			r.writeChars("\n");
+		} catch (FileNotFoundException e) {
+			System.out.println("File does not exist.");
+		}
+		
+		System.out.println("Added to " + m_fileName + ":\"" + Line + "\"");
+		
+	}
+	
+	/**
+	 * This method is to remove the first word of a string
+	 * 
+	 * @param string
+	 * 
+	 */
+	private static String removeFirstWord(String userCommand) {
+		return userCommand.replace(getFirstWord(userCommand), "").trim();
+	}
+	
+	/**
+	 * This method is to get the first word of a string
+	 * 
+	 * @param string
+	 * 
+	 */
+	private static String getFirstWord(String userCommand) {
+		String commandTypeString = userCommand.trim().split("\\s+")[0];
+		return commandTypeString;
+	}
+	
+	/**
+	 * This method is to identify whether it is an exit command
+	 * 
+	 * @param command
+	 * 
+	 * @return is exit command
+	 * 
+	 */
+	private static boolean isExit(String command) {
+		return command.equalsIgnoreCase("exit");
+	}
+
+	/**
+	 * This method is to identify whether it is a clear command
+	 * 
+	 * @param command
+	 * 
+	 * @return is clear command
+	 * 
+	 */
+	private static boolean isClear(String command){
+		return command.equalsIgnoreCase("clear");
+	}
+
+	/**
+	 * This method is to identify whether it is a delete command
+	 * 
+	 * @param command
+	 * 
+	 * @return is delete command
+	 * 
+	 */
+	private static boolean isDelete(String command) {
+		return command.equalsIgnoreCase("delete");
+	}
+
+	/**
+	 * This method is to identify whether it is a display command
+	 * 
+	 * @param command
+	 * 
+	 * @return is display command
+	 * 
+	 */
+	private static boolean isDisplay(String command) {
+		return command.equalsIgnoreCase("display");
+	}
+	
+
+	/**
+	 * This method is to identify whether it is an add command
+	 * 
+	 * @param command
+	 * 
+	 * @return is add command
+	 * 
+	 */
+	private static boolean isAddCommand(String command) {
+		return command.equalsIgnoreCase("add");
+	}
+
+}

@@ -24,6 +24,7 @@ import java.util.Scanner;
  * @author Zhao Hang
  */
 public class TextBuddy {
+        //try 
 	//this is the name of the file
 	private static String m_fileName = null;
 	//this is the flag for exit
